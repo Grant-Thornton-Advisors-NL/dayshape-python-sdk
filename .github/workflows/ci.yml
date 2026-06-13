@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . --group dev
+      - name: Type check (mypy strict)
+        run: mypy
+      - name: Codegen drift check
+        run: python scripts/generate_dims.py --check
+      - name: Tests with coverage
+        run: |
+          coverage run -m pytest
+          coverage report --fail-under=90
+      - name: Critical-module branch coverage (auth + query == 100%)
+        run: |
+          coverage report --include="*/dayshape/_auth.py,*/dayshape/_query.py" --fail-under=100
+
+  packaging-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel and import in a clean venv
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install dist/*.whl
+          # dims.py must ship in the wheel (no workbook needed at install time)
+          /tmp/smoke/bin/python -c "import dayshape; from dayshape.dims import TaskDim; assert TaskDim.ID == 'TaskId'"

@@ -1,0 +1,1036 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Reporting Service Payloads (v2)",
+    "description": "Dayshape reporting service API. This new API is simplified and exposes additional controls for consumers.",
+    "version": "v2"
+  },
+  "paths": {
+    "/token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get a JWT Token",
+        "description": "Version neutral endpoint used to get a JWT token. JWT tokens should be be supplied to any endpoints requiring authorization.\r\n            \r\n_Make sure your token is for an API user that has the permissions you will require._",
+        "requestBody": {
+          "description": "Credentials for the API user you want generate a JWT token for.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The JWT generated is returned as plain text.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid credentials were supplied or the user is not configured as an API user."
+          }
+        }
+      }
+    },
+    "/Info/reportsOverview": {
+      "get": {
+        "tags": [
+          "Info"
+        ],
+        "summary": "This endpoint returns\r\n<list type=\"number\"><item><term>Report names</term><description>- The names of all the production-ready Reporting Service reports that can be run</description></item><item><term>Report Payload Versions</term><description>- The versions of all Report Payloads that can be returned from the Reporting Service.</description></item></list>",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/v2": {
+      "post": {
+        "tags": [
+          "Reporting"
+        ],
+        "summary": "Run a V2 report",
+        "description": "Runs the supplied report query and returns a payload with the results.",
+        "parameters": [
+          {
+            "name": "options",
+            "in": "header",
+            "description": "",
+            "schema": {
+              "$ref": "#/components/schemas/HeaderOptions"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryMessageV2"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Report run successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResultMessageV2"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request payload is invalid."
+          },
+          "403": {
+            "description": "User is not permitted to run the provided query."
+          },
+          "429": {
+            "description": "User is running too many reports in parallel."
+          }
+        }
+      }
+    },
+    "/v2/export": {
+      "post": {
+        "tags": [
+          "Reporting"
+        ],
+        "summary": "Export a V2 report",
+        "description": "Runs the supplied report query and returns a XLSX with the results.",
+        "parameters": [
+          {
+            "name": "options",
+            "in": "header",
+            "description": "",
+            "schema": {
+              "$ref": "#/components/schemas/HeaderOptions"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportMessageV2"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Report run successful."
+          },
+          "400": {
+            "description": "Request payload is invalid."
+          },
+          "403": {
+            "description": "User is not permitted to run the provided query."
+          },
+          "429": {
+            "description": "User is running too many reports in parallel."
+          },
+          "500": {
+            "description": "Unexpected internal server error or the report results exceed the supported max size of an excel spreadsheet."
+          }
+        }
+      }
+    },
+    "/v2/metadata": {
+      "get": {
+        "tags": [
+          "Reporting"
+        ],
+        "parameters": [
+          {
+            "name": "reportId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reportSubTypeId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportMetadataMessageV2"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportMetadataMessageV2"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportMetadataMessageV2"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/saveReport": {
+      "post": {
+        "tags": [
+          "Reporting"
+        ],
+        "summary": "This endpoint is explicitly called from UI after RunReport is successful in order to save that query and return saved report's Hash.",
+        "requestBody": {
+          "description": "Query message to use while saving report.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryMessageV2"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryMessageV2"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryMessageV2"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/v2/saveReportQueryMessage/{pinned}": {
+      "post": {
+        "tags": [
+          "Reporting"
+        ],
+        "summary": "This endpoint is called from UI by using the Save button in order to insert/update a SavedReportQueryMessage and return it's Id.",
+        "parameters": [
+          {
+            "name": "pinned",
+            "in": "path",
+            "description": "Whether the UserSavedReportQueryMessage entity should be pinned or not.",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "SavedReportQueryMessage payload itself. Query property of the object is type of QueryMessageV2.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedReportQueryMessageV2"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedReportQueryMessageV2"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedReportQueryMessageV2"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/v2/pinnedReports/{userId}": {
+      "get": {
+        "tags": [
+          "Reporting"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/v2/savedReports/{userId}": {
+      "get": {
+        "tags": [
+          "Reporting"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/runSavedReport/{hash}": {
+      "get": {
+        "tags": [
+          "SavedReports"
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "options",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/HeaderOptions"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/getReportQuery/{hash}": {
+      "get": {
+        "tags": [
+          "SavedReports"
+        ],
+        "summary": "This endpoint gets a report query based on a hash - all report queries are saved, either by default or explicitly by a user.\r\nAt first it looks for a explicitly user-saved report.\r\nIf there isn't one of those, then it looks for a non-user saved report i.e. just the standard report queries that are all saved by default.",
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "description": "A hash identifier related to a report query.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/deleteSavedReport/{id}": {
+      "delete": {
+        "tags": [
+          "SavedReports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ComparativeDimensionMessageV2": {
+        "required": [
+          "dimA",
+          "dimB"
+        ],
+        "type": "object",
+        "properties": {
+          "dimA": {
+            "$ref": "#/components/schemas/DimensionMessageV2"
+          },
+          "dimB": {
+            "$ref": "#/components/schemas/DimensionMessageV2"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Comparative dimensions are dimensions which are dynamic dimensions built by comparing two number dimensions with each other.\r\n            \r\nThese use the formula: <i>{dimA}Vs{dimB} = {dimB} != 0 ? ( {dimA} / {dimB}) - 1 : 0</i>"
+      },
+      "DataDimensionConfigV2": {
+        "required": [
+          "aggregateFunction",
+          "dimensionName"
+        ],
+        "type": "object",
+        "properties": {
+          "dimensionName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "aggregateFunction": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DateTimeFormattingOptions": {
+        "type": "object",
+        "properties": {
+          "dateFormat": {
+            "type": "string",
+            "description": "Format to return date values in.<br /><b>Valid options are:</b><br /> - DD/MM/YYYY<br /> - MM/DD/YYYY<br /> - YYYY-MM-DD",
+            "nullable": true,
+            "example": "DD/MM/YYYY"
+          },
+          "timeFormat": {
+            "type": "string",
+            "description": "Format to return time values in.<br /><b>Valid options are:</b><br /> - 12 Hour<br /> - 24 Hour <br /><i>For example, \"12 Hour\" would return time 16:59:00 as \"4:59 PM\". \"24 Hour\" would return this as \"16:59\"</i>",
+            "nullable": true,
+            "example": "12 Hour"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DimensionMessageV2": {
+        "required": [
+          "dimensionId"
+        ],
+        "type": "object",
+        "properties": {
+          "dimensionId": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The ID of the dimension you wish to include.\r\n            \r\nSee the <i>Dayshape Reports</i> spreadsheet supplied by Dayshape for a full breakdown of all dimension IDs and a description of what they do.",
+            "example": "jobName"
+          },
+          "sorted": {
+            "$ref": "#/components/schemas/SortOrder"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Describes a dimension in a report query message"
+      },
+      "DimensionMetadataV2": {
+        "type": "object",
+        "properties": {
+          "dimensionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExportMessageV2": {
+        "required": [
+          "reportId"
+        ],
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The ID of the report you wish to run.\r\n            \r\nSince this is an identifier it must match the ID of one of our supported report types.<br />\r\nSee the <i>Dayshape Reports</i> spreadsheet supplied by Dayshape for a full breakdown of all report IDs and a description of what they do.",
+            "example": "jobListing"
+          },
+          "subType": {
+            "type": "integer",
+            "description": "Optional subtype of a report.\r\n            \r\nUsed by the `JobGroupListing` report to indicate the job group level the report should be run against.",
+            "format": "int32",
+            "nullable": true,
+            "example": null
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency to return economics values in.\r\n            \r\nThis should be in the <a href=\"https://www.iso.org/iso-4217-currency-codes.html\">ISO 4217</a> format and it should match a configured reporting currency within Dayshape.\r\n            \r\n<i>This property will only be applied if economics dimensions have been selected.</i>",
+            "nullable": true,
+            "example": "GBP"
+          },
+          "instanceId": {
+            "type": "integer",
+            "description": "The ID of the instance that should be queried against.\r\n            \r\nWhen omitted the live instance will be used.",
+            "format": "int32",
+            "nullable": true,
+            "example": null
+          },
+          "currentInstance": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "deprecated": true
+          },
+          "reportFormattingOptions": {
+            "$ref": "#/components/schemas/ReportFormattingOptions"
+          },
+          "from": {
+            "type": "string",
+            "description": "Start of the report date range.\r\n            \r\n<i>This should be a string representing the date and time in the ISO 8601 format.</i>",
+            "format": "date-time",
+            "example": "2030-01-01T00:00:00.000Z"
+          },
+          "to": {
+            "type": "string",
+            "description": "End of the report date range.\r\n            \r\n<i>This should be a string representing the date and time in the ISO 8601 format.</i>",
+            "format": "date-time",
+            "example": "2030-01-02T00:00:00.000Z"
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DimensionMessageV2"
+            },
+            "description": "Dimensions to include in the report results.",
+            "nullable": true
+          },
+          "comparativeDimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparativeDimensionMessageV2"
+            },
+            "description": "Comparative dimensions to include in the report results.\r\n            \r\nAny two dimensions of the same numeric type can be requested as comparative dimensions.",
+            "nullable": true
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilterMessageV2"
+            },
+            "description": "Filters to apply when running the report.\r\n            \r\nUsed to filter to specific data requested by the user.",
+            "nullable": true
+          },
+          "hash": {
+            "type": "string",
+            "description": "<b>Ignored by the run report endpoints.</b>",
+            "nullable": true
+          },
+          "hideReportUrl": {
+            "type": "boolean",
+            "description": "Explicit option to hide report url in excel, currently used by Gantt Master Schedule"
+          },
+          "pivot": {
+            "$ref": "#/components/schemas/PivotMessageV2"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FilterDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/FilterType"
+          },
+          "dataRequired": {
+            "type": "boolean"
+          },
+          "parameterNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "dataTreeRequired": {
+            "type": "string",
+            "nullable": true
+          },
+          "selectionPlaceholder": {
+            "type": "string",
+            "nullable": true
+          },
+          "dataValuesByLabel": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "FilterGroupDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "filterTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilterDefinitionDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "FilterMessageV2": {
+        "required": [
+          "filterId"
+        ],
+        "type": "object",
+        "properties": {
+          "filterId": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The ID of a filter you wish to include.\r\n            \r\nSee the <i>Dayshape Reports</i> spreadsheet supplied by Dayshape for a full breakdown of all filter IDs and a description of what they do.",
+            "example": "jobTextFilter"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": { },
+            "description": "Dictionary of parameters to be used by the filter.\r\n            \r\nSee the <i>Dayshape Reports</i> spreadsheet supplied by Dayshape for a full breakdown of all filter parameters and a description of what they do.",
+            "nullable": true,
+            "example": {
+              "text": "some job I am interested in"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "FilterType": {
+        "enum": [
+          "selector",
+          "text",
+          "picker",
+          "inOutPicker",
+          "jobLeader",
+          "jobResourceMgt",
+          "jobEconomics",
+          "jobCreationDate",
+          "currencyPicker"
+        ],
+        "type": "string"
+      },
+      "HeaderOptions": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "LoginModel": {
+        "required": [
+          "password",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The username of the user you wish to generate a token for.",
+            "example": "Super User"
+          },
+          "password": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The password for the user you wish to generate a token for.",
+            "example": "SuperSecureP@55word1"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PivotFilterMessageV2": {
+        "required": [
+          "dimensionName",
+          "excludedValues"
+        ],
+        "type": "object",
+        "properties": {
+          "dimensionName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "excludedValues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "PivotMessageV2": {
+        "required": [
+          "columnDimensions",
+          "dataDimensions",
+          "rowDimensions"
+        ],
+        "type": "object",
+        "properties": {
+          "rowDimensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "columnDimensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dataDimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DataDimensionConfigV2"
+            }
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PivotFilterMessageV2"
+            },
+            "nullable": true
+          },
+          "calculatedFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "showColumnGrandTotals": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryMessageV2": {
+        "required": [
+          "reportId"
+        ],
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "minLength": 1,
+            "type": "string",
+            "description": "The ID of the report you wish to run.\r\n            \r\nSince this is an identifier it must match the ID of one of our supported report types.<br />\r\nSee the <i>Dayshape Reports</i> spreadsheet supplied by Dayshape for a full breakdown of all report IDs and a description of what they do.",
+            "example": "jobListing"
+          },
+          "subType": {
+            "type": "integer",
+            "description": "Optional subtype of a report.\r\n            \r\nUsed by the `JobGroupListing` report to indicate the job group level the report should be run against.",
+            "format": "int32",
+            "nullable": true,
+            "example": null
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency to return economics values in.\r\n            \r\nThis should be in the <a href=\"https://www.iso.org/iso-4217-currency-codes.html\">ISO 4217</a> format and it should match a configured reporting currency within Dayshape.\r\n            \r\n<i>This property will only be applied if economics dimensions have been selected.</i>",
+            "nullable": true,
+            "example": "GBP"
+          },
+          "instanceId": {
+            "type": "integer",
+            "description": "The ID of the instance that should be queried against.\r\n            \r\nWhen omitted the live instance will be used.",
+            "format": "int32",
+            "nullable": true,
+            "example": null
+          },
+          "currentInstance": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "deprecated": true
+          },
+          "reportFormattingOptions": {
+            "$ref": "#/components/schemas/ReportFormattingOptions"
+          },
+          "from": {
+            "type": "string",
+            "description": "Start of the report date range.\r\n            \r\n<i>This should be a string representing the date and time in the ISO 8601 format.</i>",
+            "format": "date-time",
+            "example": "2030-01-01T00:00:00.000Z"
+          },
+          "to": {
+            "type": "string",
+            "description": "End of the report date range.\r\n            \r\n<i>This should be a string representing the date and time in the ISO 8601 format.</i>",
+            "format": "date-time",
+            "example": "2030-01-02T00:00:00.000Z"
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DimensionMessageV2"
+            },
+            "description": "Dimensions to include in the report results.",
+            "nullable": true
+          },
+          "comparativeDimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparativeDimensionMessageV2"
+            },
+            "description": "Comparative dimensions to include in the report results.\r\n            \r\nAny two dimensions of the same numeric type can be requested as comparative dimensions.",
+            "nullable": true
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilterMessageV2"
+            },
+            "description": "Filters to apply when running the report.\r\n            \r\nUsed to filter to specific data requested by the user.",
+            "nullable": true
+          },
+          "hash": {
+            "type": "string",
+            "description": "<b>Ignored by the run report endpoints.</b>",
+            "nullable": true
+          },
+          "hideReportUrl": {
+            "type": "boolean",
+            "description": "Explicit option to hide report url in excel, currently used by Gantt Master Schedule"
+          }
+        },
+        "additionalProperties": false,
+        "description": "A V2 reporting query"
+      },
+      "ReportFormattingOptions": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "description": "The TimeZone that should be used for returned DateTime values.  If not provided the instance default will be applied.\r\n            \r\nThis should be an identifier of a TimeZone from the Time Zone Database (tz)",
+            "nullable": true,
+            "example": "Europe/London"
+          },
+          "locale": {
+            "type": "string",
+            "description": "The locale that should be applied when formatting numbers.  If not provided the instance default will be applied.\r\n            \r\nThis should be an identifier for a locale configured in Dayshape. These identifiers will be custom locales or locales from ISO 639-1.",
+            "nullable": true,
+            "example": "en-GB"
+          },
+          "dateTimeFormattingOptions": {
+            "$ref": "#/components/schemas/DateTimeFormattingOptions"
+          },
+          "formatNumbers": {
+            "type": "boolean",
+            "description": "If true, all numbers will be formatted based on the locale of the report request, otherwise they are returned as unformatted numbers rounded to 2 decimal places.",
+            "example": true
+          },
+          "nullFormatString": {
+            "type": "string",
+            "description": "Allows a string to be returned in place of null values. If not provided then nulls are returned unformatted.",
+            "nullable": true,
+            "example": "-"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportMetadataMessageV2": {
+        "type": "object",
+        "properties": {
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DimensionMetadataV2"
+            },
+            "nullable": true
+          },
+          "filterGroupDefinitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilterGroupDefinitionDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportResultMessageV2": {
+        "type": "object",
+        "properties": {
+          "reportStarted": {
+            "type": "string",
+            "description": "When the provided report query started to run.",
+            "format": "date-time",
+            "example": "2029-11-12T12:10:56.000Z"
+          },
+          "reportDurationMs": {
+            "type": "integer",
+            "description": "Time it took to run the report query, in milliseconds.",
+            "format": "int64",
+            "example": 10000
+          },
+          "queryMessage": {
+            "$ref": "#/components/schemas/QueryMessageV2"
+          },
+          "recordCount": {
+            "type": "integer",
+            "description": "The total number of rows in the report result.",
+            "format": "int32",
+            "readOnly": true
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { }
+            },
+            "description": "A 2d array of rows and cells that represents the results of the report query.",
+            "nullable": true
+          },
+          "dimensions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "A dictionary of dimensions, where the key is the id of the dimension requests and the value is an index.\r\n            \r\nThe index can be used to lookup row dimension values in `Rows` or `DimensionDisplayNames`",
+            "nullable": true
+          },
+          "dimensionDisplayNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The localized names of the dimensions requested\r\n            \r\nThe `Dimensions` dictionary can be used to get the index of a specific dimension display name.",
+            "nullable": true
+          },
+          "reportDisplayName": {
+            "type": "string",
+            "description": "Localized name of the report that was requested.\r\n            \r\n<i>The requested locale will be used for localization.</i>",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "An object that contains the results of a V2 report query."
+      },
+      "SavedReportQueryMessageV2": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "instanceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "identifier": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          },
+          "query": {
+            "$ref": "#/components/schemas/QueryMessageV2"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SortOrder": {
+        "enum": [
+          "ascending",
+          "descending"
+        ],
+        "type": "string"
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "apiKey",
+        "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        "name": "Authorization",
+        "in": "header"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
+}

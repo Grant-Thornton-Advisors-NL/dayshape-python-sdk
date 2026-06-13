@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dayshape-sdk"
+dynamic = ["version"]
+description = "Async Python SDK for the Dayshape Reporting Service API (v2.0)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "Dayshape SDK contributors" }]
+keywords = ["dayshape", "reporting", "api", "sdk", "async"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+pandas = ["pandas>=2.0"]
+
+[project.urls]
+Homepage = "https://github.com/dayshape/dayshape-python-sdk"
+Documentation = "https://github.com/dayshape/dayshape-python-sdk#readme"
+Changelog = "https://github.com/dayshape/dayshape-python-sdk/blob/main/CHANGELOG.md"
+
+# PEP 735 dependency groups
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "mypy>=1.10",
+    "coverage>=7.5",
+    "openpyxl>=3.1",      # codegen only (scripts/generate_dims.py)
+]
+
+[tool.hatch.version]
+path = "src/dayshape/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dayshape"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/dayshape"]
+plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+branch = true
+source = ["dayshape"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "\\.\\.\\.",
+]
