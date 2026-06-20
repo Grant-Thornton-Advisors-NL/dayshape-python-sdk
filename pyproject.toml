@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dayshape-sdk"
+name = "dayshape-python-sdk"
 dynamic = ["version"]
 description = "Async Python SDK for the Dayshape Reporting Service API (v2.0)"
 readme = "README.md"

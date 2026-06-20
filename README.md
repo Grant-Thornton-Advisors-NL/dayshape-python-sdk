@@ -1,4 +1,4 @@
-# dayshape-sdk
+# dayshape-python-sdk
 
 A typed, fully-async Python SDK for the **Dayshape Reporting Service API (v2.0)**.
 
@@ -10,7 +10,7 @@ typed core with resource façades (`client.workers`, `client.jobs`,
 ## Install
 
 ```bash
-pip install dayshape-sdk
+pip install dayshape-python-sdk
 ```
 
 ## Quick start
