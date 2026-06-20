@@ -40,13 +40,25 @@ class RedactionFilter(logging.Filter):
         return True
 
 
+def _ensure_redaction(logger: logging.Logger) -> None:
+    if not any(isinstance(f, RedactionFilter) for f in logger.filters):
+        logger.addFilter(RedactionFilter())
+
+
 def get_logger(name: str | None = None) -> logging.Logger:
-    """Return a child of the ``dayshape`` logger with redaction attached."""
+    """Return a (child) ``dayshape`` logger with redaction attached.
+
+    A :class:`logging.Filter` only runs for records emitted *at* the logger it is
+    attached to — it does not run for records propagating up from descendants. So
+    the filter is attached to every logger we hand out (child loggers included),
+    not only the base, ensuring secrets are scrubbed wherever the SDK logs.
+    """
     base = logging.getLogger(_LOGGER_NAME)
-    if not any(isinstance(f, RedactionFilter) for f in base.filters):
-        base.addFilter(RedactionFilter())
+    _ensure_redaction(base)
     if name:
-        return base.getChild(name)
+        child = base.getChild(name)
+        _ensure_redaction(child)
+        return child
     return base
 
 
