@@ -10,7 +10,7 @@ __version__ = "0.1.0"
 
 #: The spec artefacts this build was generated/validated against.
 SPEC_VERSION = {
-    "workbook": "25.7.0.0",  # Dayshape Reporting Service Detail
+    "workbook": "26.3.0",  # Dayshape Reporting Service Detail
     "api_doc": "R2",  # Reporting Service API Documentation (March 2025)
     "openapi": "v2",  # Reporting Service Payloads (v2)
 }

@@ -24,7 +24,7 @@ ReportId = StrEnum(  # type: ignore[misc]
     "ReportId",
     {report_id: report_id for report_id in CATALOGUE},
 )
-ReportId.__doc__ = "Wire report identifiers for the 38 Reporting Service reports."
+ReportId.__doc__ = "Wire report identifiers for the 42 Reporting Service reports."
 
 
 @dataclass(frozen=True, slots=True)

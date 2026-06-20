@@ -3,7 +3,7 @@
 A typed, fully-async Python SDK for the **Dayshape Reporting Service API (v2.0)**.
 
 Built on `httpx` + Pydantic v2. The Reporting Service is a report-execution API:
-one logical "run report" operation across 38 reports. This SDK wraps it as a
+one logical "run report" operation across 42 reports. This SDK wraps it as a
 typed core with resource façades (`client.workers`, `client.jobs`,
 `client.bookings`, …) and a raw escape hatch (`client.reports`).
 
@@ -65,4 +65,7 @@ fallback), and single-flight refresh on `401`. Bad credentials surface as
 
 Beta. Wire contracts are taken verbatim from the v2 OpenAPI specification and the
 March 2025 API documentation; identifier catalogues from the Reporting Service
-Detail workbook (v25.7.0.0). Residual assumptions are tracked in `plan.md` §11.2.
+Detail workbook (v26.3.0). Residual assumptions are tracked in `plan.md` §11.2.
+Where the live v26.3 server's `/v2/metadata` disagrees with the workbook (a few
+dimensions were renamed/removed server-side without a workbook update), the typed
+models follow the live server.

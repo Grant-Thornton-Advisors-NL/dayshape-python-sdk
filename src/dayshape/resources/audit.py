@@ -190,5 +190,65 @@ class AuditNamespace:
             chunk=chunk,
         )
 
+    def grades(
+        self,
+        *,
+        period: Any = None,
+        dimensions: Any = None,
+        filters: Sequence[Filter] = (),
+        chunk: Any = None,
+    ) -> "ReportQuery[AuditLogEntry]":
+        """Grade audit trail (new in v26.3; report ``LogListingGrade``)."""
+        return self._run(
+            "LogListingGrade",
+            ["LogGradeName", "LogActionTime", "LogOperation", "LogActor"],
+            period=period,
+            dimensions=dimensions,
+            filters=filters,
+            chunk=chunk,
+        )
+
+    def suggestions(
+        self,
+        *,
+        period: Any = None,
+        dimensions: Any = None,
+        filters: Sequence[Filter] = (),
+        chunk: Any = None,
+    ) -> "ReportQuery[AuditLogEntry]":
+        """Suggestion audit trail (new in v26.3; report ``LogListingSuggestion``)."""
+        return self._run(
+            "LogListingSuggestion",
+            [
+                "LogSuggestionId",
+                "LogSuggestedWorkerName",
+                "LogJobName",
+                "LogActionTime",
+                "LogOperation",
+            ],
+            period=period,
+            dimensions=dimensions,
+            filters=filters,
+            chunk=chunk,
+        )
+
+    def custom_members(
+        self,
+        *,
+        period: Any = None,
+        dimensions: Any = None,
+        filters: Sequence[Filter] = (),
+        chunk: Any = None,
+    ) -> "ReportQuery[AuditLogEntry]":
+        """Custom member audit trail (new in v26.3; report ``LogListingCustomMember``)."""
+        return self._run(
+            "LogListingCustomMember",
+            ["LogCustomMemberName", "LogActionTime", "LogOperation", "LogActor"],
+            period=period,
+            dimensions=dimensions,
+            filters=filters,
+            chunk=chunk,
+        )
+
 
 __all__ = ["AuditNamespace"]

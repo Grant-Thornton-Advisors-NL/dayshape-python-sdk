@@ -29,6 +29,7 @@ from .resources.bookings import BookingResource
 from .resources.clients import ClientResource
 from .resources.exchange_rates import ExchangeRateResource
 from .resources.job_groups import JobGroupResource
+from .resources.job_task_phases import JobTaskPhaseResource
 from .resources.jobs import JobResource
 from .resources.rates import RateResource
 from .resources.reports import RawReportResource
@@ -91,6 +92,7 @@ class DayshapeClient:
         self._jobs = JobResource(self)
         self._bookings = BookingResource(self)
         self._job_groups = JobGroupResource(self)
+        self._job_task_phases = JobTaskPhaseResource(self)
         self._unavailabilities = UnavailabilityResource(self)
         self._users = UserResource(self)
         self._units = UnitResource(self)
@@ -134,6 +136,10 @@ class DayshapeClient:
     @property
     def job_groups(self) -> JobGroupResource:
         return self._job_groups
+
+    @property
+    def job_task_phases(self) -> JobTaskPhaseResource:
+        return self._job_task_phases
 
     @property
     def unavailabilities(self) -> UnavailabilityResource:
@@ -270,6 +276,10 @@ class ScopedClient:
     @property
     def job_groups(self) -> JobGroupResource:
         return JobGroupResource(self)
+
+    @property
+    def job_task_phases(self) -> JobTaskPhaseResource:
+        return JobTaskPhaseResource(self)
 
     @property
     def unavailabilities(self) -> UnavailabilityResource:

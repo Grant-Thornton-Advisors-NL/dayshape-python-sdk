@@ -212,6 +212,29 @@ def test_report_meta_fields() -> None:
     assert meta.rate_limited is True
 
 
+@pytest.mark.parametrize(
+    "report_id",
+    [
+        "JobTaskPhaseListing",
+        "LogListingGrade",
+        "LogListingSuggestion",
+        "LogListingCustomMember",
+    ],
+)
+def test_v26_3_reports_registered(report_id: str) -> None:
+    # The four reports added in the v26.3 workbook are in the catalogue.
+    meta = get_meta(report_id)
+    assert meta is not None
+    assert meta.report_id == report_id
+    assert ReportId(report_id) == report_id
+
+
+def test_catalogue_has_42_reports() -> None:
+    from dayshape.reports._catalogue import CATALOGUE
+
+    assert len(CATALOGUE) == 42
+
+
 def test_registry_exports_from_reports_package() -> None:
     # ReportId/ReportType/get_meta/resolve_report_id re-exported on the subpackage.
     assert reports_pkg.ReportId is ReportId
