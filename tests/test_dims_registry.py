@@ -357,12 +357,17 @@ def test_to_wire_camel_case_and_iso_z() -> None:
     assert wire["dimensions"] == [{"dimensionId": "TaskId"}]
 
 
-def test_to_wire_drops_empty_collections() -> None:
+def test_to_wire_keeps_empty_collections() -> None:
+    # The live Reporting Service 500s when ``filters`` is omitted, so the
+    # collection keys are always emitted (empty arrays), not dropped.
     q = QueryMessageV2(report_id="TaskListing")
     wire = q.to_wire()
-    assert wire == {"reportId": "TaskListing"}
-    for key in ("dimensions", "comparativeDimensions", "filters"):
-        assert key not in wire
+    assert wire == {
+        "reportId": "TaskListing",
+        "dimensions": [],
+        "comparativeDimensions": [],
+        "filters": [],
+    }
 
 
 def test_to_wire_exclude_none() -> None:

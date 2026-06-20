@@ -14,6 +14,8 @@ from __future__ import annotations
 import asyncio
 import random
 import re
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from types import TracebackType
 from typing import Any
 
@@ -66,6 +68,12 @@ class Transport:
         self._auth = BearerAuth(self._tokens)
         self._closed = False
         self._version_warned = False
+        #: Latest API-version discovery headers seen on any response (plan.md §3.2).
+        self._captured_versions: dict[str, str | None] = {
+            "supported": None,
+            "deprecated": None,
+            "sunset": None,
+        }
 
     # -- lifecycle ---------------------------------------------------------- #
     async def __aenter__(self) -> "Transport":
@@ -96,10 +104,16 @@ class Transport:
             json=self._credentials.login_body(),
             headers={"Accept": "text/plain"},
         )
-        if resp.status_code == 403:
+        # The token endpoint rejects bad credentials with 401 ("Invalid Username
+        # or Password!") on current servers, or 403 ("not an API user") — both
+        # mean the same thing to the caller: authentication failed at /token.
+        # Map them to a single, actionable AuthenticationError rather than the
+        # generic 401 message (which speaks of a token refresh that never
+        # happened on the initial acquisition).
+        if resp.status_code in (401, 403):
             raise AuthenticationError(
-                "Authentication failed (403): invalid credentials, or the user is "
-                "not configured as an API user."
+                f"Authentication failed ({resp.status_code}) at /token: invalid "
+                "credentials, or the user is not configured as an API user."
             )
         if resp.status_code >= 400:
             raise self._error_for(resp)
@@ -178,6 +192,7 @@ class Transport:
                 ) from exc
 
             self._check_version(resp)
+            self._capture_versions(resp.headers)
             status = resp.status_code
             if status < 400:
                 return resp
@@ -199,14 +214,31 @@ class Transport:
 
     async def _wait_rate_limit(self, resp: httpx.Response, attempt: int) -> None:
         cfg = self._config.retries
-        retry_after = resp.headers.get("Retry-After")
-        if retry_after is not None and retry_after.isdigit():
-            delay = min(cfg.rate_limit_cap, float(retry_after))
-        else:
-            delay = min(cfg.rate_limit_cap, cfg.rate_limit_base * (2 ** (attempt - 1)))
+        delay = self._retry_after_seconds(resp.headers.get("Retry-After"))
+        if delay is None:
+            delay = cfg.rate_limit_base * (2 ** (attempt - 1))
+        delay = min(cfg.rate_limit_cap, delay)
         _log.debug("429 received; waiting %.2fs before retry", delay)
         if delay > 0:
             await asyncio.sleep(delay)
+
+    @staticmethod
+    def _retry_after_seconds(value: str | None) -> float | None:
+        """Parse a ``Retry-After`` header in either delta-seconds or HTTP-date form."""
+        if value is None:
+            return None
+        token = value.strip()
+        if token.isdigit():
+            return float(token)
+        try:
+            when = parsedate_to_datetime(token)
+        except (TypeError, ValueError):
+            return None
+        if when is None:
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
 
     # -- version discovery -------------------------------------------------- #
     @staticmethod
@@ -241,6 +273,33 @@ class Transport:
             "deprecated": headers.get("Api-Deprecated-Versions"),
             "sunset": headers.get("Sunset"),
         }
+
+    def _capture_versions(self, headers: httpx.Headers) -> None:
+        """Remember the latest non-empty version-discovery headers from a response."""
+        for key, value in self.server_versions(headers).items():
+            if value is not None:
+                self._captured_versions[key] = value
+
+    async def fetch_server_versions(self) -> dict[str, str | None]:
+        """Return the server's API-version discovery headers (plan.md §3.2).
+
+        Populated from any response's ``Api-Supported-Versions`` /
+        ``Api-Deprecated-Versions`` / ``Sunset`` headers. If nothing has been
+        captured yet, a single lightweight metadata request is made to populate
+        it (the headers ride on ``/v2``-family responses, not ``/token`` or
+        ``/status``). Best-effort: values stay ``None`` if the probe fails.
+        """
+        self._ensure_open()
+        if all(v is None for v in self._captured_versions.values()):
+            try:
+                await self._send(
+                    "GET",
+                    f"{self._config.versioned_root()}/metadata",
+                    params={"reportId": "WorkerListing"},
+                )
+            except DayshapeError:
+                pass
+        return dict(self._captured_versions)
 
     # -- error mapping ------------------------------------------------------ #
     def _error_for(self, resp: httpx.Response) -> DayshapeError:

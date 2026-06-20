@@ -44,8 +44,14 @@ _REPORTS: dict[str, tuple[str, list[str]]] = {
         "WorkerWorkHours",
         ["FragmentHours", "FragmentDate", "FragmentMonth"],
     ),
-    "revenue": ("RevenueByTime", ["FragmentDate", "FragmentMonth"]),
-    "comparative_revenue": ("ComparativeRevenue", ["FragmentMonth"]),
+    # RevenueByTime/ComparativeRevenue use the TaskVActual* dimension family,
+    # not the Fragment* family of the hours-over-time pivots (verified against
+    # /v2/metadata on v26.3). ComparativeRevenue exposes no time-bucket dim.
+    "revenue": ("RevenueByTime", ["TaskVActualJobName", "TaskVActualMonth"]),
+    "comparative_revenue": (
+        "ComparativeRevenue",
+        ["TaskVActualJobName", "TaskVActualJobClientName"],
+    ),
     "schedule_export": (
         "ScheduleExport",
         ["ScheduleExportWorkerName", "ScheduleExportJobName"],

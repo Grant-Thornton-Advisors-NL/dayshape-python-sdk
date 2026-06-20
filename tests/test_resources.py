@@ -549,7 +549,7 @@ async def test_timeseries_default_dimensions() -> None:
     async with build_client(backend) as client:
         with client.period(YEAR) as c:
             await c.timeseries.revenue()
-    assert _dim_ids(_last_v2_body(backend)) == ["FragmentDate", "FragmentMonth"]
+    assert _dim_ids(_last_v2_body(backend)) == ["TaskVActualJobName", "TaskVActualMonth"]
 
 
 async def test_pivot_row_values_exposes_dynamic_columns() -> None:
@@ -562,8 +562,8 @@ async def test_pivot_row_values_exposes_dynamic_columns() -> None:
             rows = await c.timeseries.revenue()
     values = rows[0].values()
     # Every requested dimension surfaces as a dynamic column on the pivot row.
-    assert "FragmentDate" in values
-    assert "FragmentMonth" in values
+    assert "TaskVActualJobName" in values
+    assert "TaskVActualMonth" in values
 
 
 # --------------------------------------------------------------------------- #
