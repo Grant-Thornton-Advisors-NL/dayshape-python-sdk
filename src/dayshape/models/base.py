@@ -21,9 +21,9 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PrivateAttr
 from ..exceptions import DetachedModelError
 
 if TYPE_CHECKING:
+    from ..client import DayshapeClient
     from ..period import Period
     from ..reports.query import Dimension
-    from ..resources.base import ResourceClient
 
 
 # --------------------------------------------------------------------------- #
@@ -142,7 +142,7 @@ class DayshapeModel(BaseModel):
         default_factory=frozenset, exclude=True, repr=False
     )
 
-    _client: "weakref.ref[ResourceClient] | None" = PrivateAttr(default=None)
+    _client: "weakref.ref[DayshapeClient] | None" = PrivateAttr(default=None)
     _period: "Period | None" = PrivateAttr(default=None)
 
     # -- custom / extra fields --------------------------------------------- #
@@ -162,11 +162,11 @@ class DayshapeModel(BaseModel):
         return dimension_id in self.requested_dimensions
 
     # -- client binding (weak) for relational hops ------------------------- #
-    def _bind(self, client: "ResourceClient", period: "Period | None") -> None:
+    def _bind(self, client: "DayshapeClient", period: "Period | None") -> None:
         self._client = weakref.ref(client)
         self._period = period
 
-    def _bound_client(self) -> "ResourceClient":
+    def _bound_client(self) -> "DayshapeClient":
         ref = self._client
         live = ref() if ref is not None else None
         if live is None:
@@ -175,6 +175,10 @@ class DayshapeModel(BaseModel):
                 "through a DayshapeClient resource before navigating relations."
             )
         return live
+
+    def _inherited_period(self) -> "Period | None":
+        """The period of the query that produced this row (for relational hops)."""
+        return self._period
 
     # -- helpers ----------------------------------------------------------- #
     @staticmethod
