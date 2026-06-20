@@ -205,20 +205,28 @@ class QueryMessageV2(BaseModel):
         return value
 
     def to_wire(self) -> dict[str, Any]:
-        """Serialise to a request body matching the official examples.
+        """Serialise to a request body the Reporting Service accepts.
 
         ``from``/``to`` are emitted as millisecond ISO-8601 with a ``Z`` suffix to
         match the vendor examples exactly, rather than Pydantic's default isoformat.
+
+        The collection keys ``dimensions``, ``comparativeDimensions`` and
+        ``filters`` are always emitted, even when empty. The live Reporting
+        Service (observed on v26.3.x) returns an opaque ``500`` ("Request failed,
+        please contact Dayshape support.") when ``filters`` is omitted, rather
+        than a clean validation error — so a "minimal" payload that drops empty
+        arrays breaks every report run. Sending the empty arrays matches the
+        shape the server actually requires.
         """
         body = self.model_dump(by_alias=True, exclude_none=True)
         if self.from_ is not None:
             body["from"] = _iso(self.from_)
         if self.to is not None:
             body["to"] = _iso(self.to)
-        # Empty collections are dropped to keep the payload minimal and matching.
+        # Ensure the three collection keys are always present (server requires
+        # at least ``filters``; the others are sent for shape-consistency).
         for key in ("dimensions", "comparativeDimensions", "filters"):
-            if key in body and not body[key]:
-                del body[key]
+            body.setdefault(key, [])
         return body
 
 

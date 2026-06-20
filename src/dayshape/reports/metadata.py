@@ -10,12 +10,19 @@ validation.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 
 class FilterType(StrEnum):
-    """The kinds of filter input a filter group exposes (wire: ``FilterType``)."""
+    """The kinds of filter input a filter group exposes (wire: ``FilterType``).
+
+    The wire vocabulary is extended by the server over time (e.g. ``date``,
+    ``percentage`` and ``jobClaim`` appeared after the v25.7 workbook). Unknown
+    values are tolerated rather than rejected — see :data:`FilterTypeValue` — so
+    metadata discovery never hard-fails on a newer server (plan.md §4.4, §4.7).
+    """
 
     SELECTOR = "selector"
     TEXT = "text"
@@ -26,6 +33,30 @@ class FilterType(StrEnum):
     JOB_ECONOMICS = "jobEconomics"
     JOB_CREATION_DATE = "jobCreationDate"
     CURRENCY_PICKER = "currencyPicker"
+    DATE = "date"
+    PERCENTAGE = "percentage"
+    JOB_CLAIM = "jobClaim"
+
+
+def _coerce_filter_type(value: Any) -> Any:
+    """Map a known wire value to :class:`FilterType`, else leave it a raw string.
+
+    The Reporting Service introduces new filter-type tokens between releases; a
+    strict enum would crash :meth:`ReportMetadata` (the runtime-discovery
+    channel) on any newer server. Unknown values pass through as plain strings —
+    they still compare equal to their wire token via :class:`StrEnum` semantics.
+    """
+    if isinstance(value, str) and not isinstance(value, FilterType):
+        try:
+            return FilterType(value)
+        except ValueError:
+            return value
+    return value
+
+
+#: A filter type that upgrades to :class:`FilterType` when known and tolerates
+#: novel server tokens as raw strings (plan.md §4.4 warn-not-raise philosophy).
+FilterTypeValue = Annotated[FilterType | str, BeforeValidator(_coerce_filter_type)]
 
 
 class DimensionMetadata(BaseModel):
@@ -44,7 +75,7 @@ class FilterDefinition(BaseModel):
 
     name: str | None = None
     display_name: str | None = Field(default=None, alias="displayName")
-    type: FilterType | None = None
+    type: FilterTypeValue | None = None
     data_required: bool = Field(default=False, alias="dataRequired")
     parameter_names: list[str] = Field(default_factory=list, alias="parameterNames")
     selection_placeholder: str | None = Field(
@@ -83,6 +114,7 @@ class ReportMetadata(BaseModel):
 
 __all__ = [
     "FilterType",
+    "FilterTypeValue",
     "DimensionMetadata",
     "FilterDefinition",
     "FilterGroupDefinition",

@@ -386,6 +386,22 @@ async def test_login_403_raises_authentication_error() -> None:
     assert "Authentication failed (403)" in str(exc.value)
 
 
+async def test_login_401_raises_authentication_error() -> None:
+    # Current servers reject bad credentials at /token with 401 ("Invalid
+    # Username or Password!"), not 403. It must surface as a clear
+    # AuthenticationError, not the generic "persisted after a token refresh".
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/token"):
+            return httpx.Response(401, text="Invalid Username or Password!")
+        return httpx.Response(200, json={})
+
+    async with make_transport(handler) as t:
+        with pytest.raises(AuthenticationError) as exc:
+            await t.login()
+    assert "Authentication failed (401) at /token" in str(exc.value)
+    assert "token refresh" not in str(exc.value)
+
+
 async def test_login_other_error_uses_error_mapping() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/token"):
@@ -511,6 +527,39 @@ async def test_server_versions_extracts_headers() -> None:
         _, headers = await t.request_json("GET", V2_URL)
         versions = t.server_versions(headers)
     assert versions == {"supported": "v1, v2", "deprecated": "v1", "sunset": "soon"}
+
+
+async def test_fetch_server_versions_captures_from_responses() -> None:
+    # Version headers ride on /v2-family responses and are captured passively;
+    # a subsequent fetch returns them without issuing another request.
+    handler = sequence_handler(
+        httpx.Response(200, json={"a": 1}, headers={"Api-Supported-Versions": "1.0, 2.0"})
+    )
+    async with make_transport(handler) as t:
+        await t.request_json("GET", V2_URL)
+        versions = await t.fetch_server_versions()
+    assert versions["supported"] == "1.0, 2.0"
+    assert handler.state["i"] == 1  # no extra probe request was made
+
+
+async def test_fetch_server_versions_probes_when_empty() -> None:
+    # With nothing captured yet, fetch issues one lightweight metadata request.
+    handler = sequence_handler(
+        httpx.Response(200, json={}, headers={"Api-Supported-Versions": "2.0"})
+    )
+    async with make_transport(handler) as t:
+        versions = await t.fetch_server_versions()
+    assert versions["supported"] == "2.0"
+    assert handler.state["i"] == 1  # the probe
+
+
+def test_retry_after_seconds_parses_numeric_date_and_garbage() -> None:
+    assert Transport._retry_after_seconds("120") == 120.0
+    assert Transport._retry_after_seconds(None) is None
+    assert Transport._retry_after_seconds("not-a-date") is None
+    # An HTTP-date in the future parses to a positive number of seconds.
+    secs = Transport._retry_after_seconds("Wed, 21 Oct 2099 07:28:00 GMT")
+    assert secs is not None and secs > 0
 
 
 # --------------------------------------------------------------------------- #

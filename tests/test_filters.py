@@ -253,7 +253,9 @@ def test_multiple_typed_filters_round_trip() -> None:
     ]
 
 
-def test_empty_filters_dropped_from_wire() -> None:
+def test_empty_filters_present_in_wire() -> None:
+    # The server requires ``filters`` to be present even when empty (it 500s
+    # otherwise), so an empty filter list serialises to ``"filters": []``.
     period = Period.year(2026)
     q = QueryMessageV2(
         report_id="TaskListing",
@@ -261,7 +263,7 @@ def test_empty_filters_dropped_from_wire() -> None:
         to=period.end,
         dimensions=["TaskId"],
     )
-    assert "filters" not in q.to_wire()
+    assert q.to_wire()["filters"] == []
 
 
 def test_sequence_inputs_are_materialised_to_lists() -> None:

@@ -213,6 +213,16 @@ class DayshapeClient:
         """Eagerly acquire a token (optional fail-fast auth)."""
         await self._transport.login()
 
+    async def server_versions(self) -> dict[str, str | None]:
+        """The server's API-version discovery headers (plan.md §3.2).
+
+        Returns a mapping with keys ``"supported"``, ``"deprecated"`` and
+        ``"sunset"`` (each ``None`` when the server does not send that header).
+        Captured from response headers; if no request has been made yet, a single
+        lightweight metadata request is issued to populate it.
+        """
+        return await self._transport.fetch_server_versions()
+
 
 class ScopedClient:
     """A period-bound view over a :class:`DayshapeClient` (plan.md §7.1)."""

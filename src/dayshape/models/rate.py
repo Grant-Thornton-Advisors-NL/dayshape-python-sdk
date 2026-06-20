@@ -13,12 +13,15 @@ from .base import DateTimeValue, DayshapeModel
 class Rate(DayshapeModel):
     """A charge/cost rate effective over a date range."""
 
+    # NB: ``RateCurrency`` is intentionally absent — it is not a RateListing
+    # dimension on current servers (verified against /v2/metadata on v26.3), so
+    # requesting it by default asked for a phantom dimension. The ``currency``
+    # field below stays declared for tenants/versions that do expose it.
     default_dimensions: ClassVar[tuple[str, ...]] = (
         "RateChargeTypeName",
         "RateValue",
         "RateStart",
         "RateEnd",
-        "RateCurrency",
     )
 
     remote_grade_id: str | None = Field(default=None, alias="RateRemoteGradeId")

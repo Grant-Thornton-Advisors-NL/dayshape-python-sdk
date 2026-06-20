@@ -15,12 +15,15 @@ class ExchangeRate(DayshapeModel):
     default_dimensions: ClassVar[tuple[str, ...]] = (
         "ExchangeRateCurrencyFrom",
         "ExchangeRateCurrencyTo",
-        "ExchangeRate",
+        "ExchangeRateRate",
     )
 
     currency_from: str | None = Field(default=None, alias="ExchangeRateCurrencyFrom")
     currency_to: str | None = Field(default=None, alias="ExchangeRateCurrencyTo")
-    rate: float | None = Field(default=None, alias="ExchangeRate")
+    # Live wire id is ``ExchangeRateRate`` (verified against /v2/metadata on a
+    # v26.3 server); the bare ``ExchangeRate`` id from the v25.7 workbook does
+    # not exist and left this field permanently null.
+    rate: float | None = Field(default=None, alias="ExchangeRateRate")
 
 
 __all__ = ["ExchangeRate"]
