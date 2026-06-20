@@ -49,6 +49,10 @@ dmypy.json
 .pytype/
 .ruff_cache/
 
+# uv lockfile (library: consumers resolve from dependency ranges, and CI does
+# not use `uv sync`, so the lock is dev-only and not committed)
+uv.lock
+
 # Virtual environments
 .venv/
 venv/

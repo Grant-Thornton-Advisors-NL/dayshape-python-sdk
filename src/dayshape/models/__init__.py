@@ -16,6 +16,7 @@ from .client_entity import Client
 from .exchange_rate import ExchangeRate
 from .job import Job
 from .job_group import JobGroup
+from .job_task_phase import JobTaskPhase
 from .pivot import PivotRow
 from .rate import Rate
 from .trait import Trait
@@ -37,6 +38,7 @@ __all__ = [
     "ExchangeRate",
     "Job",
     "JobGroup",
+    "JobTaskPhase",
     "PivotRow",
     "Rate",
     "Trait",
