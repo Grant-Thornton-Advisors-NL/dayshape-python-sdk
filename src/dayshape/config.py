@@ -5,10 +5,18 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Literal
 
 #: Documented server ceiling per request (15 minutes). The default read timeout
 #: sits just above this so the server's diagnosable error wins (plan.md §3.1).
 SERVER_REQUEST_CEILING = timedelta(minutes=15)
+
+#: How the SDK reacts when the server omits a requested dimension from a result
+#: (a silent-null catalogue drift). ``"warn"`` emits a :class:`UserWarning`,
+#: ``"error"`` raises :class:`~dayshape.exceptions.UnknownDimensionError`, and
+#: ``"off"`` disables the check.
+DimensionValidation = Literal["off", "warn", "error"]
+DIMENSION_VALIDATION_MODES: frozenset[str] = frozenset({"off", "warn", "error"})
 
 ENV_BASE_URL = "DAYSHAPE_BASE_URL"
 ENV_USERNAME = "DAYSHAPE_USERNAME"
@@ -86,8 +94,17 @@ class DayshapeConfig:
     refresh_skew: timedelta = timedelta(seconds=60)
     assumed_token_ttl: timedelta = timedelta(hours=1)
     strict_models: bool = False
+    validate_dimensions: DimensionValidation = "warn"
     timeout: TimeoutConfig = field(default_factory=TimeoutConfig)
     retries: RetryConfig = field(default_factory=RetryConfig)
+
+    def __post_init__(self) -> None:
+        if self.validate_dimensions not in DIMENSION_VALIDATION_MODES:
+            raise ValueError(
+                "validate_dimensions must be one of "
+                f"{sorted(DIMENSION_VALIDATION_MODES)}, got "
+                f"{self.validate_dimensions!r}."
+            )
 
     @classmethod
     def resolve(
@@ -141,6 +158,8 @@ __all__ = [
     "DayshapeConfig",
     "TimeoutConfig",
     "RetryConfig",
+    "DimensionValidation",
+    "DIMENSION_VALIDATION_MODES",
     "SERVER_REQUEST_CEILING",
     "ENV_BASE_URL",
     "ENV_USERNAME",

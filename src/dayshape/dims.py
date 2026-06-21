@@ -23,6 +23,23 @@ class Dim(str):
 
     __slots__ = ()
 
+    @property
+    def id(self) -> str:
+        """The wire dimension id (same value as ``str(self)``)."""
+        return str(self)
+
+    @property
+    def name(self) -> str:
+        """Alias of :pyattr:`id`. Constants carry no separate display
+        name; localized names come from report metadata
+        (:pyattr:`~dayshape.reports.metadata.DimensionMetadata.display_name`)."""
+        return str(self)
+
+    @property
+    def value(self) -> str:
+        """Alias of :pyattr:`id`, for parity with enum-style access."""
+        return str(self)
+
     def asc(self) -> "Dimension":
         """This dimension, sorted ascending."""
         from .reports.query import Dimension, Sort

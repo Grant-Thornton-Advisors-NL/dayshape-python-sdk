@@ -180,6 +180,31 @@ class QueryError(DayshapeError):
     """
 
 
+class UnknownDimensionError(QueryError):
+    """One or more requested dimensions were not returned by the server.
+
+    The Reporting Service silently drops a dimension it does not recognise from
+    the columnar result, so *every* value for that dimension decodes to ``None`` —
+    indistinguishable from a genuine null. This is raised (under
+    ``validate_dimensions="error"``) or warned (under ``"warn"``, the default)
+    when the response omits a requested dimension, naming the offending ids so a
+    catalogue-vs-server drift surfaces immediately instead of as silent data loss.
+
+    Subclasses :class:`QueryError`, so ``except QueryError`` still catches it.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        report_id: str | None = None,
+        dimensions: "tuple[str, ...] | list[str] | None" = None,
+    ) -> None:
+        super().__init__(message)
+        self.report_id = report_id
+        self.dimensions: tuple[str, ...] = tuple(dimensions or ())
+
+
 class ChunkingError(DayshapeError):
     """An invalid chunk window specification."""
 
@@ -215,6 +240,7 @@ __all__ = [
     "ResponseFormatError",
     "ResponseValidationError",
     "QueryError",
+    "UnknownDimensionError",
     "ChunkingError",
     "ResultTooLargeError",
     "DetachedModelError",

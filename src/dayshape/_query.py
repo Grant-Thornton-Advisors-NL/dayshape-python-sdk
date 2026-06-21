@@ -13,13 +13,15 @@ instances — and re-running a query runs it again (no implicit caching).
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import AsyncIterator, Awaitable, Callable, Generator
 from datetime import timedelta
 from typing import Any, Generic, TypeVar
 
 from ._chunking import ChunkSpec
 from ._logging import get_logger
-from .exceptions import QueryError
+from .config import DimensionValidation
+from .exceptions import QueryError, UnknownDimensionError
 from .period import Period
 from .reports.query import Dimension, QueryMessageV2
 from .reports.result import ReportResult, ResultMeta
@@ -47,6 +49,7 @@ class ReportQuery(Generic[T]):
         saved_hash: str | None = None,
         identity_dimension: str | None = None,
         allow_unordered: bool = False,
+        validate_dimensions: DimensionValidation = "off",
     ) -> None:
         self._runner = runner
         self._decode = decode
@@ -57,6 +60,7 @@ class ReportQuery(Generic[T]):
         self._saved_hash = saved_hash
         self._identity_dimension = identity_dimension
         self._allow_unordered = allow_unordered
+        self._validate_dimensions = validate_dimensions
         self._meta = ResultMeta()
         self._consumptions = 0
 
@@ -115,6 +119,8 @@ class ReportQuery(Generic[T]):
             dedupe_on=self._dedupe_on,
             saved_hash=self._saved_hash,
             identity_dimension=self._identity_dimension,
+            allow_unordered=self._allow_unordered,
+            validate_dimensions=self._validate_dimensions,
         )
 
     # -- immutable refinement ---------------------------------------------- #
@@ -160,6 +166,8 @@ class ReportQuery(Generic[T]):
         for i, window in enumerate(self._windows()):
             result = await self._run(window)
             self._absorb_meta(result)
+            if i == 0:
+                self._validate_returned_dimensions(result)
             for record in result.iter_records():
                 if seen is not None and dedupe_on is not None:
                     key = record.get(dedupe_on)
@@ -168,6 +176,47 @@ class ReportQuery(Generic[T]):
                     seen.add(key)
                 yield self._decode(record)
             self._meta.completed_windows = i + 1
+
+    def _validate_returned_dimensions(self, result: ReportResult) -> None:
+        """Flag requested dimensions the server silently dropped (plan.md §4.4).
+
+        The Reporting Service omits any dimension it does not recognise from the
+        columnar result rather than erroring, so every value for that column would
+        decode to ``None`` — silent data loss. Comparing the requested dimension
+        ids against the columns actually returned turns that into a clear signal
+        (``"warn"`` → :class:`UserWarning`; ``"error"`` →
+        :class:`UnknownDimensionError`) at no extra request cost.
+        """
+        mode = self._validate_dimensions
+        if mode == "off" or self._query is None:
+            return
+        returned = set(result.index)
+        if not returned:
+            # The server described no columns (an empty/zero-column envelope); we
+            # cannot tell "unknown report" from "no data", so do not guess.
+            return
+        # Only literal requested dimensions are checked — server-derived
+        # comparative columns carry computed ids that are validated by the server.
+        missing = [
+            d.dimension_id
+            for d in self._query.dimensions
+            if d.dimension_id not in returned
+        ]
+        if not missing:
+            return
+        report_id = self._query.report_id
+        listed = ", ".join(missing)
+        message = (
+            f"The {report_id} report did not return {len(missing)} requested "
+            f"dimension(s): {listed}. The server does not expose them on this "
+            "version, so every value would be null (silent data loss). Run "
+            "client.validate_catalogue() to see catalogue-vs-server drift."
+        )
+        if mode == "error":
+            raise UnknownDimensionError(
+                message, report_id=report_id, dimensions=missing
+            )
+        warnings.warn(message, stacklevel=2)
 
     def _windows(self) -> list[Period | None]:
         if self._saved_hash is not None or self._period is None:
@@ -210,6 +259,7 @@ class ReportQuery(Generic[T]):
             "saved_hash": self._saved_hash,
             "identity_dimension": self._identity_dimension,
             "allow_unordered": self._allow_unordered,
+            "validate_dimensions": self._validate_dimensions,
         }
         params.update(overrides)
         return ReportQuery(**params)
