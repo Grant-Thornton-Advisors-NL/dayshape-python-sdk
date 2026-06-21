@@ -9,6 +9,7 @@ from .bookings import BookingResource
 from .clients import ClientResource
 from .exchange_rates import ExchangeRateResource
 from .job_groups import JobGroupResource
+from .job_task_phases import JobTaskPhaseResource
 from .jobs import JobResource
 from .rates import RateResource
 from .reports import RawReportResource
@@ -28,6 +29,7 @@ __all__ = [
     "ExchangeRateResource",
     "JobGroupResource",
     "JobResource",
+    "JobTaskPhaseResource",
     "RateResource",
     "TraitResource",
     "UnavailabilityResource",

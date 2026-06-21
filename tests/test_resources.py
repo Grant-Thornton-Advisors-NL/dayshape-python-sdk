@@ -17,6 +17,7 @@ import pytest
 from dayshape import Period, ReportMetadata
 from dayshape.exceptions import QueryError
 from dayshape.models.audit import AuditLogEntry
+from dayshape.models.job_task_phase import JobTaskPhase
 from dayshape.models.pivot import PivotRow
 
 from conftest import build_client, envelope_from_request, make_jwt, MockBackend
@@ -449,6 +450,9 @@ async def test_reports_saved_runs_saved_report() -> None:
         ("users", "LogListingUser"),
         ("settings", "LogListingSetting"),
         ("workflow", "LogListingWorkflow"),
+        ("grades", "LogListingGrade"),
+        ("suggestions", "LogListingSuggestion"),
+        ("custom_members", "LogListingCustomMember"),
     ],
 )
 async def test_audit_methods_run_matching_report(method: str, report_id: str) -> None:
@@ -502,6 +506,89 @@ async def test_audit_accepts_explicit_dimensions() -> None:
         with client.period(YEAR) as c:
             await c.audit.workers(dimensions=["LogWorkerId"])
     assert _dim_ids(_last_v2_body(backend)) == ["LogWorkerId"]
+
+
+@pytest.mark.parametrize(
+    ("method", "expected_dims"),
+    [
+        ("grades", ["LogGradeName", "LogActionTime", "LogOperation", "LogActor"]),
+        (
+            "suggestions",
+            [
+                "LogSuggestionId",
+                "LogSuggestedWorkerName",
+                "LogJobName",
+                "LogActionTime",
+                "LogOperation",
+            ],
+        ),
+        (
+            "custom_members",
+            ["LogCustomMemberName", "LogActionTime", "LogOperation", "LogActor"],
+        ),
+    ],
+)
+async def test_audit_v26_3_methods_default_dimensions(
+    method: str, expected_dims: list[str]
+) -> None:
+    # The new v26.3 audit trails request their live /v2/metadata dimensions.
+    backend = MockBackend()
+    async with build_client(backend) as client:
+        with client.period(YEAR) as c:
+            await getattr(c.audit, method)()
+    assert _dim_ids(_last_v2_body(backend)) == expected_dims
+
+
+# --------------------------------------------------------------------------- #
+# Job Task Phases resource (new in v26.3)
+# --------------------------------------------------------------------------- #
+def _phase_backend() -> MockBackend:
+    """A backend that types ``JobTaskPhaseJobId`` as an int and the rest as text."""
+
+    def v2(request: httpx.Request) -> httpx.Response:
+        return envelope_from_request(
+            request,
+            n_rows=1,
+            cell=lambda d, r: 4321 if d == "JobTaskPhaseJobId" else f"{d}-{r}",
+        )
+
+    return MockBackend(v2=v2)
+
+
+async def test_job_task_phases_runs_matching_report() -> None:
+    backend = _phase_backend()
+    async with build_client(backend) as client:
+        with client.period(YEAR) as c:
+            rows = await c.job_task_phases.list()
+    assert rows
+    assert all(isinstance(r, JobTaskPhase) for r in rows)
+    assert _last_v2_body(backend)["reportId"] == "JobTaskPhaseListing"
+
+
+async def test_job_task_phases_default_dimensions() -> None:
+    backend = _phase_backend()
+    async with build_client(backend) as client:
+        with client.period(YEAR) as c:
+            await c.job_task_phases.list()
+    assert _dim_ids(_last_v2_body(backend)) == [
+        "TaskPhaseName",
+        "TaskPhaseRemoteId",
+        "JobTaskPhaseJobId",
+        "JobName",
+        "JobRequestNumber",
+    ]
+
+
+async def test_job_task_phases_decodes_typed_fields() -> None:
+    backend = _phase_backend()
+    async with build_client(backend) as client:
+        with client.period(YEAR) as c:
+            rows = await c.job_task_phases.list()
+    phase = rows[0]
+    assert phase.job_id == 4321
+    assert phase.phase_name == "TaskPhaseName-0"
+    assert phase.phase_remote_id == "TaskPhaseRemoteId-0"
+    assert phase.job_request_number == "JobRequestNumber-0"
 
 
 # --------------------------------------------------------------------------- #

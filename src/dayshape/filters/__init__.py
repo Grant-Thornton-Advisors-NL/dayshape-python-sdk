@@ -8,6 +8,10 @@ names are taken verbatim from the Reporting Service Detail workbook (v25.7.0.0).
 For any filter without a typed builder here, use :class:`RawFilter` (arbitrary
 id + parameters) or :class:`CustomFieldFilter` (tenant custom-field filters).
 """
+# NB: the docstring above cites the v25.7.0.0 workbook because the typed builders
+# below were authored from it; v26.3.0 added reports/dimensions but did not change
+# any existing filter parameter names. New v26.3 reports (Suggestion/Grade/Custom
+# Member audit trails, JobTaskPhaseListing) are reachable via RawFilter.
 
 from __future__ import annotations
 

@@ -398,7 +398,7 @@ def test_dimension_ids_is_property() -> None:
 # Issue #8 — version bump and new public exports
 # --------------------------------------------------------------------------- #
 def test_version_bumped() -> None:
-    assert dayshape.__version__ == "0.2.0"
+    assert dayshape.__version__ == "0.3.0"
 
 
 def test_new_public_exports() -> None:

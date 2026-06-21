@@ -35,10 +35,10 @@ except ModuleNotFoundError:  # pragma: no cover - dev-only dependency
     raise
 
 ROOT = Path(__file__).resolve().parent.parent
-WORKBOOK = ROOT / "specs" / "Dayshape Reporting Service Detail (v25.7.0.0).xlsx"
+WORKBOOK = ROOT / "specs" / "Dayshape Reporting Service Detail (v26.3).xlsx"
 DIMS_OUT = ROOT / "src" / "dayshape" / "dims.py"
 CATALOGUE_OUT = ROOT / "src" / "dayshape" / "reports" / "_catalogue.py"
-WORKBOOK_VERSION = "25.7.0.0"
+WORKBOOK_VERSION = "26.3.0"
 
 # Sheets that are not individual reports.
 NON_REPORT_SHEETS = {

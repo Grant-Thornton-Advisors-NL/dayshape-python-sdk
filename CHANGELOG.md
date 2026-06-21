@@ -6,13 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-06-21
+## [0.3.0] - 2026-06-21
 
-Integration-feedback hardening from running the SDK end-to-end against a live
-v26.3 Reporting Service (GitHub issues #3–#10).
+The v26.3 catalogue upgrade plus integration-feedback hardening from running the
+SDK end-to-end against a live v26.3 Reporting Service (GitHub issues #3–#10).
 
 ### Added
 
+- Upgraded report/dimension catalogue to the Reporting Service Detail workbook
+  **v26.3.0** with four new reports, exposed idiomatically:
+  - `client.audit.grades()` → `LogListingGrade`
+  - `client.audit.suggestions()` → `LogListingSuggestion`
+  - `client.audit.custom_members()` → `LogListingCustomMember`
+  - `client.job_task_phases` → `JobTaskPhaseListing`, returning the new
+    `JobTaskPhase` model (dimensions verified against live `/v2/metadata`).
+  All four are also reachable as `ReportId` members and via the raw
+  `client.reports` escape hatch.
 - **Dimension validation** (`validate_dimensions` client option, default `"warn"`).
   The server silently drops a requested dimension it does not recognise, so every
   value decodes to `None` — indistinguishable from a real null. The SDK now diffs
@@ -31,6 +40,14 @@ v26.3 Reporting Service (GitHub issues #3–#10).
 
 ### Changed
 
+- Upgraded the report/dimension catalogue from the Reporting Service Detail
+  workbook **v25.7.0.0** to **v26.3.0** (`SPEC_VERSION["workbook"]`, regenerated
+  `dims.py` + `reports/_catalogue.py`). The catalogue now covers **42 reports**
+  (up from 38), and `dayshape.dims` gains the new v26.3 dimensions
+  (e.g. `ApprovedBudgetGrossMargin`, `JobRateCardName`, `RateRoleName`,
+  `TaskStatisticsTotalHours`, `TaskPhaseName`, `UnavailabilityMappingId`,
+  `UserIsRemoteSyncEnabled`). Where the live v26.3 server's `/v2/metadata`
+  diverges from the workbook, typed models continue to follow the live server.
 - **`timeseries.report()` and its wrappers now forward** `dedupe_on`, `chunk`,
   `allow_unordered`, `comparative_dimensions`, `sub_type`, `currency`, and
   `formatting`. The dedup/window knobs that collapse the per-day rows are reachable
