@@ -303,7 +303,7 @@ async def test_reports_metadata_returns_report_metadata() -> None:
     async with build_client(handler) as client:
         md = await client.reports.metadata("TaskListing")
     assert isinstance(md, ReportMetadata)
-    assert md.dimension_ids() == frozenset({"TaskId", "TaskName"})
+    assert md.dimension_ids == frozenset({"TaskId", "TaskName"})
     # reportId is sent as a query parameter on the GET.
     assert captured["params"]["reportId"] == "TaskListing"
 

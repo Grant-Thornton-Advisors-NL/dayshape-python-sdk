@@ -207,9 +207,9 @@ def test_report_metadata_model_validate_and_dimension_ids() -> None:
         ],
     }
     meta = ReportMetadata.model_validate(wire)
-    # dimension_ids() collects only ids that are present (None dropped).
-    assert meta.dimension_ids() == frozenset({"TaskId", "TaskStart"})
-    assert isinstance(meta.dimension_ids(), frozenset)
+    # dimension_ids collects only ids that are present (None dropped).
+    assert meta.dimension_ids == frozenset({"TaskId", "TaskStart"})
+    assert isinstance(meta.dimension_ids, frozenset)
 
     # FilterType enum parses from the wire string value.
     group = meta.filter_groups[0]
@@ -231,7 +231,7 @@ def test_report_metadata_defaults_empty() -> None:
     meta = ReportMetadata.model_validate({})
     assert meta.dimensions == []
     assert meta.filter_groups == []
-    assert meta.dimension_ids() == frozenset()
+    assert meta.dimension_ids == frozenset()
 
 
 def test_report_metadata_extra_fields_ignored() -> None:
@@ -239,7 +239,7 @@ def test_report_metadata_extra_fields_ignored() -> None:
     meta = ReportMetadata.model_validate(
         {"dimensions": [{"dimensionId": "X", "unknownKey": 1}], "spuriousTop": 9}
     )
-    assert meta.dimension_ids() == frozenset({"X"})
+    assert meta.dimension_ids == frozenset({"X"})
 
 
 def test_filter_type_enum_values() -> None:

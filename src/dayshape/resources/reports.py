@@ -89,6 +89,7 @@ class RawReportResource:
             dedupe_on=dedupe_on,
             identity_dimension=identity,
             allow_unordered=allow_unordered,
+            validate_dimensions=view._config.validate_dimensions,
         )
 
     async def metadata(

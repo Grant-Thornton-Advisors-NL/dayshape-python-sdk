@@ -9,9 +9,10 @@ manager — scoping does no I/O).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from types import TracebackType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from pydantic import SecretStr
@@ -19,8 +20,11 @@ from pydantic import SecretStr
 from ._logging import configure
 from ._ratelimit import RateLimitGate
 from ._transport import Transport
-from .config import DayshapeConfig, RetryConfig, TimeoutConfig
+from ._version import SPEC_VERSION
+from .config import DayshapeConfig, DimensionValidation, RetryConfig, TimeoutConfig
+from .exceptions import DayshapeError
 from .period import Period
+from .reports.drift import CatalogueReport, ReportDrift
 from .reports.query import ReportFormattingOptions, default_formatting
 from .reports.runner import ReportRunner
 from .resources.actuals import ActualResource
@@ -40,7 +44,7 @@ from .resources.users import UserResource
 from .resources.workers import WorkerResource
 
 if TYPE_CHECKING:
-    from .resources.base import ClientView
+    from .resources.base import ClientView, ResourceClient
 
 
 class DayshapeClient:
@@ -64,6 +68,7 @@ class DayshapeClient:
         log_level: int | str | None = None,
         debug: bool = False,
         strict_models: bool = False,
+        validate_dimensions: DimensionValidation = "warn",
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         pw = password.get_secret_value() if isinstance(password, SecretStr) else password
@@ -78,6 +83,7 @@ class DayshapeClient:
             refresh_skew=refresh_skew,
             assumed_token_ttl=assumed_token_ttl,
             strict_models=strict_models,
+            validate_dimensions=validate_dimensions,
             timeout=TimeoutConfig.coerce(timeout),
             retries=retries if retries is not None else RetryConfig(),
         )
@@ -222,6 +228,97 @@ class DayshapeClient:
         lightweight metadata request is issued to populate it.
         """
         return await self._transport.fetch_server_versions()
+
+    # -- catalogue drift guardrail (issue #4) ------------------------------- #
+    def _entity_resources(self) -> "list[ResourceClient[Any]]":
+        """The typed entity resources, for introspecting their default dimensions."""
+        return [
+            self._workers,
+            self._jobs,
+            self._bookings,
+            self._job_groups,
+            self._unavailabilities,
+            self._users,
+            self._units,
+            self._clients,
+            self._traits,
+            self._rates,
+            self._exchange_rates,
+            self._actuals,
+        ]
+
+    def _dimension_expectations(self) -> dict[str, frozenset[str]]:
+        """Map each report id to the dimensions the SDK requests for it by default.
+
+        Sourced from the entity façades (``report_id`` + the model's
+        ``default_dimensions``) and the ``timeseries`` pivot table. These are the
+        dimensions whose silent disappearance (issue #3) :meth:`validate_catalogue`
+        guards against.
+        """
+        from .resources.timeseries import _REPORTS
+
+        expectations: dict[str, set[str]] = {}
+        for resource in self._entity_resources():
+            dims = {str(d) for d in resource._default_dims()}
+            if dims:
+                expectations.setdefault(resource._report_id(), set()).update(dims)
+        for _name, (report_id, default_dims) in _REPORTS.items():
+            if default_dims:
+                expectations.setdefault(report_id, set()).update(default_dims)
+        return {rid: frozenset(dims) for rid, dims in expectations.items()}
+
+    async def validate_catalogue(
+        self, *, report_ids: Sequence[str] | None = None
+    ) -> CatalogueReport:
+        """Diff the SDK's default dimensions against the live server (issue #4).
+
+        For each report the SDK drives by default (or the explicit ``report_ids``),
+        fetch ``/v2/metadata`` and report any default dimension the live server no
+        longer exposes — the precise drift that silently nulls fields (issue #3).
+        Pairs with :meth:`server_versions`; the returned :class:`CatalogueReport`
+        carries both versions and per-report :class:`ReportDrift` entries.
+
+        Best-effort: a report whose metadata cannot be fetched (e.g. a ``403``
+        permission denial) is recorded as ``available=False`` rather than aborting
+        the whole sweep.
+        """
+        self._ensure_open()
+        expectations = self._dimension_expectations()
+        targets = (
+            list(report_ids) if report_ids is not None else sorted(expectations)
+        )
+        drifts: list[ReportDrift] = []
+        for report_id in targets:
+            expected = expectations.get(report_id, frozenset())
+            try:
+                metadata = await self._runner.metadata(report_id)
+            except DayshapeError as exc:
+                drifts.append(
+                    ReportDrift(
+                        report_id=report_id,
+                        available=False,
+                        error=str(exc),
+                        missing_dimensions=frozenset(),
+                        checked_dimensions=expected,
+                    )
+                )
+                continue
+            missing = frozenset(expected) - metadata.dimension_ids
+            drifts.append(
+                ReportDrift(
+                    report_id=report_id,
+                    available=True,
+                    error=None,
+                    missing_dimensions=missing,
+                    checked_dimensions=expected,
+                )
+            )
+        versions = await self._transport.fetch_server_versions()
+        return CatalogueReport(
+            server_versions=versions,
+            spec_version=dict(SPEC_VERSION),
+            reports=tuple(drifts),
+        )
 
 
 class ScopedClient:

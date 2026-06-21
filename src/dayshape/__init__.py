@@ -37,6 +37,7 @@ from .exceptions import (
     ResponseValidationError,
     ResultTooLargeError,
     ServerError,
+    UnknownDimensionError,
 )
 from .models import (
     Actual,
@@ -57,6 +58,7 @@ from .models import (
     Worker,
 )
 from .period import Period
+from .reports.drift import CatalogueReport, ReportDrift
 from .reports.metadata import ReportMetadata
 from .reports.query import (
     ComparativeDimension,
@@ -68,6 +70,7 @@ from .reports.query import (
 )
 from .reports.registry import ReportId, ReportType
 from .reports.result import ReportResult, ResultMeta
+from .resources.timeseries import WorkerUtilisation
 
 __all__ = [
     "__version__",
@@ -88,6 +91,9 @@ __all__ = [
     "ReportMetadata",
     "ReportResult",
     "ResultMeta",
+    "CatalogueReport",
+    "ReportDrift",
+    "WorkerUtilisation",
     # models
     "DayshapeModel",
     "Percentage",
@@ -127,6 +133,7 @@ __all__ = [
     "ResponseError",
     "ResponseValidationError",
     "QueryError",
+    "UnknownDimensionError",
     "ChunkingError",
     "DetachedModelError",
     "ClientClosedError",

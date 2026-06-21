@@ -105,8 +105,13 @@ class ReportMetadata(BaseModel):
         default_factory=list, alias="filterGroupDefinitions"
     )
 
+    @property
     def dimension_ids(self) -> frozenset[str]:
-        """The set of known dimension ids (for pre-flight validation)."""
+        """The set of known dimension ids (for pre-flight validation).
+
+        A ``@property`` so it reads naturally — ``set(md.dimension_ids)`` and
+        ``"TaskId" in md.dimension_ids`` work directly (issue #9).
+        """
         return frozenset(
             d.dimension_id for d in self.dimensions if d.dimension_id is not None
         )
